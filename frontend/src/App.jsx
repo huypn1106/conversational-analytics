@@ -4,6 +4,7 @@
 import React from "react";
 import { useChat } from "./hooks/useChat";
 import ChatPanel from "./components/ChatPanel/ChatPanel";
+import Sidebar from "./components/Sidebar/Sidebar";
 import "./App.css";
 
 // Top-level error boundary to prevent blank screen crashes
@@ -46,7 +47,7 @@ class AppErrorBoundary extends React.Component {
 }
 
 function AppContent() {
-  const { messages, isStreaming, sessionId, sendMessage, cancelStream, clearChat } = useChat();
+  const { messages, isStreaming, sessionId, sendMessage, cancelStream, clearChat, loadSession, createSession } = useChat();
 
   return (
     <div className="app">
@@ -69,14 +70,23 @@ function AppContent() {
       </header>
 
       {/* ── Main Content ───────────── */}
-      <main className="app-main">
-        <ChatPanel
-          messages={messages}
+      <main className="app-main-layout" style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+        <Sidebar
+          currentSessionId={sessionId}
+          onLoadSession={loadSession}
+          onCreateSession={createSession}
           isStreaming={isStreaming}
-          onSendMessage={sendMessage}
-          onCancelStream={cancelStream}
-          onClearChat={clearChat}
         />
+        
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+          <ChatPanel
+            messages={messages}
+            isStreaming={isStreaming}
+            onSendMessage={sendMessage}
+            onCancelStream={cancelStream}
+            onClearChat={clearChat}
+          />
+        </div>
       </main>
     </div>
   );

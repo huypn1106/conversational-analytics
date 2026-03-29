@@ -43,6 +43,12 @@ class SessionResponse(BaseModel):
     session_id: str
     created: bool = False
 
+class FolderCreateRequest(BaseModel):
+    name: str
+
+class SessionPatchRequest(BaseModel):
+    folder_id: str | None = None
+
 
 # ── SSE Helpers ───────────────────────────────────────────────────
 
@@ -53,6 +59,77 @@ def sse_event(event_type: str, data: object) -> str:
 
 
 # ── Endpoints ─────────────────────────────────────────────────────
+
+@router.get("/sessions")
+async def get_all_sessions(
+    redis: aioredis.Redis = Depends(get_redis),
+    cfg: Settings = Depends(get_settings),
+):
+    """Retrieve all existing chat sessions for the active user/browser."""
+    manager = RedisSessionManager(redis, ttl=cfg.SESSION_TTL_SECONDS)
+    sessions = await manager.get_all_sessions()
+    
+    return [
+        {
+            "session_id": s.session_id,
+            "title": s.title,
+            "folder_id": s.folder_id,
+            "created_at": s.created_at,
+        }
+        for s in sessions
+    ]
+
+@router.delete("/sessions/{session_id}")
+async def delete_session(
+    session_id: str,
+    redis: aioredis.Redis = Depends(get_redis),
+    cfg: Settings = Depends(get_settings),
+):
+    manager = RedisSessionManager(redis, ttl=cfg.SESSION_TTL_SECONDS)
+    deleted = await manager.delete_session(session_id)
+    return {"deleted": deleted}
+
+@router.patch("/sessions/{session_id}")
+async def patch_session(
+    session_id: str,
+    body: SessionPatchRequest,
+    redis: aioredis.Redis = Depends(get_redis),
+    cfg: Settings = Depends(get_settings),
+):
+    manager = RedisSessionManager(redis, ttl=cfg.SESSION_TTL_SECONDS)
+    updated = await manager.move_session(session_id, body.folder_id)
+    return {"updated": updated}
+
+@router.get("/folders")
+async def get_all_folders(
+    redis: aioredis.Redis = Depends(get_redis),
+    cfg: Settings = Depends(get_settings),
+):
+    manager = RedisSessionManager(redis, ttl=cfg.SESSION_TTL_SECONDS)
+    folders = await manager.get_all_folders()
+    return [{"id": f.id, "name": f.name} for f in folders]
+
+@router.post("/folders")
+async def create_folder(
+    body: FolderCreateRequest,
+    redis: aioredis.Redis = Depends(get_redis),
+    cfg: Settings = Depends(get_settings),
+):
+    manager = RedisSessionManager(redis, ttl=cfg.SESSION_TTL_SECONDS)
+    folder = await manager.create_folder(body.name)
+    return {"id": folder.id, "name": folder.name}
+
+@router.delete("/folders/{folder_id}")
+async def delete_folder(
+    folder_id: str,
+    delete_conversations: bool = False,
+    redis: aioredis.Redis = Depends(get_redis),
+    cfg: Settings = Depends(get_settings),
+):
+    manager = RedisSessionManager(redis, ttl=cfg.SESSION_TTL_SECONDS)
+    await manager.delete_folder(folder_id, delete_conversations=delete_conversations)
+    return {"deleted": True}
+
 
 @router.post("/sessions")
 async def create_session(
@@ -94,6 +171,10 @@ async def chat_sse(
             await manager.save_session(session)
     else:
         session = await manager.create_session()
+        
+    if session.title == "New Conversation":
+        session.title = body.message[:40] + ("..." if len(body.message) > 40 else "")
+        await manager.save_session(session)
 
     session_id = session.session_id
     

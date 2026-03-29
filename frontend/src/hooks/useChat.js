@@ -6,32 +6,32 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { streamChat } from "../api/chatStream";
 
 const SESSION_KEY = "stats-center-session-id";
-
-/**
- * Message types in the conversation:
- * - user:    User's question
- * - status:  Progress update (generating SQL, executing, etc.)
- * - sql:     Generated SQL code
- * - table:   Query result table { columns, rows }
- * - chart:   Plotly figure { data, layout }
- * - summary: NL summary of results
- * - error:   Error message
- */
+const MSG_KEY_PREFIX = "stats-center-messages-";
 
 export function useChat() {
-  const [messages, setMessages] = useState([]);
-  const [isStreaming, setIsStreaming] = useState(false);
   const [sessionId, setSessionId] = useState(
     () => localStorage.getItem(SESSION_KEY) || null
   );
+  
+  const [messages, setMessages] = useState(() => {
+    const savedId = localStorage.getItem(SESSION_KEY);
+    if (savedId) {
+      const savedMsgs = localStorage.getItem(MSG_KEY_PREFIX + savedId);
+      return savedMsgs ? JSON.parse(savedMsgs) : [];
+    }
+    return [];
+  });
+  
+  const [isStreaming, setIsStreaming] = useState(false);
   const abortRef = useRef(null);
 
-  // Persist session ID
+  // Persist session ID and messages
   useEffect(() => {
     if (sessionId) {
       localStorage.setItem(SESSION_KEY, sessionId);
+      localStorage.setItem(MSG_KEY_PREFIX + sessionId, JSON.stringify(messages));
     }
-  }, [sessionId]);
+  }, [sessionId, messages]);
 
   const sendMessage = useCallback(
     async (text) => {
@@ -141,6 +141,20 @@ export function useChat() {
     localStorage.removeItem(SESSION_KEY);
   }, []);
 
+  const loadSession = useCallback((id) => {
+    if (isStreaming) return;
+    setSessionId(id);
+    const savedMsgs = localStorage.getItem(MSG_KEY_PREFIX + id);
+    setMessages(savedMsgs ? JSON.parse(savedMsgs) : []);
+  }, [isStreaming]);
+
+  const createSession = useCallback(() => {
+    if (isStreaming) return;
+    setSessionId(null);
+    setMessages([]);
+    localStorage.removeItem(SESSION_KEY);
+  }, [isStreaming]);
+
   return {
     messages,
     isStreaming,
@@ -148,5 +162,7 @@ export function useChat() {
     sendMessage,
     cancelStream,
     clearChat,
+    loadSession,
+    createSession,
   };
 }

@@ -7,8 +7,12 @@ from __future__ import annotations
 import json
 import uuid
 import logging
+import time
 from dataclasses import dataclass, field
 from typing import Any
+
+def import_time():
+    return time.time()
 
 import redis.asyncio as aioredis
 
@@ -18,9 +22,26 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
+class FolderData:
+    id: str
+    name: str
+
+    def to_json(self) -> str:
+        return json.dumps({"id": self.id, "name": self.name})
+
+    @classmethod
+    def from_json(cls, raw: str) -> FolderData:
+        data = json.loads(raw)
+        return cls(id=data["id"], name=data["name"])
+
+
+@dataclass
 class SessionData:
     """In-memory representation of a chat session."""
     session_id: str
+    title: str = "New Conversation"
+    folder_id: str | None = None
+    created_at: float = field(default_factory=import_time)
     history: list[dict] = field(default_factory=list)
     context: dict[str, Any] = field(default_factory=dict)
     last_sql: str | None = None
@@ -29,6 +50,9 @@ class SessionData:
 
     def to_json(self) -> str:
         return json.dumps({
+            "title": self.title,
+            "folder_id": self.folder_id,
+            "created_at": self.created_at,
             "history": self.history,
             "context": self.context,
             "last_sql": self.last_sql,
@@ -41,6 +65,9 @@ class SessionData:
         data = json.loads(raw)
         return cls(
             session_id=session_id,
+            title=data.get("title", "New Conversation"),
+            folder_id=data.get("folder_id", None),
+            created_at=data.get("created_at", time.time()),
             history=data.get("history", []),
             context=data.get("context", {}),
             last_sql=data.get("last_sql"),
@@ -60,6 +87,7 @@ class RedisSessionManager:
     """
 
     KEY_PREFIX = "session:"
+    FOLDERS_KEY = "folders:all"
 
     def __init__(self, redis: aioredis.Redis, ttl: int | None = None):
         self.redis = redis
@@ -131,6 +159,63 @@ class RedisSessionManager:
         """Delete a session."""
         result = await self.redis.delete(self._key(session_id))
         return result > 0
+
+    async def get_all_sessions(self) -> list[SessionData]:
+        """Fetch all sessions ordered by creation time descending."""
+        sessions = []
+        cursor = b'0'
+        while cursor:
+            cursor, keys = await self.redis.scan(cursor, match=f"{self.KEY_PREFIX}*", count=100)
+            if keys:
+                raw_sessions = await self.redis.mget(keys)
+                for key, raw in zip(keys, raw_sessions):
+                    if raw:
+                        key_str = key if isinstance(key, str) else key.decode("utf-8")
+                        sid = key_str.replace(self.KEY_PREFIX, "")
+                        sessions.append(SessionData.from_json(sid, raw))
+        # Sort by creation time descending
+        sessions.sort(key=lambda s: s.created_at, reverse=True)
+        return sessions
+
+    async def get_all_folders(self) -> list[FolderData]:
+        """Fetch all folders."""
+        raw_folders = await self.redis.hgetall(self.FOLDERS_KEY)
+        folders = []
+        for raw in raw_folders.values():
+            if isinstance(raw, bytes):
+                raw = raw.decode("utf-8")
+            folders.append(FolderData.from_json(raw))
+        return folders
+
+    async def create_folder(self, name: str) -> FolderData:
+        folder_id = str(uuid.uuid4())
+        folder = FolderData(id=folder_id, name=name)
+        await self.redis.hset(self.FOLDERS_KEY, folder_id, folder.to_json())
+        return folder
+        
+    async def delete_folder(self, folder_id: str, delete_conversations: bool = False) -> None:
+        """Delete a folder and optionally all its conversations, or move to 'None'."""
+        await self.redis.hdel(self.FOLDERS_KEY, folder_id)
+        if delete_conversations:
+            sessions = await self.get_all_sessions()
+            for s in sessions:
+                if s.folder_id == folder_id:
+                    await self.delete_session(s.session_id)
+        else:
+            sessions = await self.get_all_sessions()
+            for s in sessions:
+                if s.folder_id == folder_id:
+                    s.folder_id = None
+                    await self.save_session(s)
+                    
+    async def move_session(self, session_id: str, folder_id: str | None) -> bool:
+        session = await self.get_session(session_id)
+        if session:
+            session.folder_id = folder_id if folder_id else None
+            await self.save_session(session)
+            return True
+        return False
+
 
 
 class SemanticRouter:
