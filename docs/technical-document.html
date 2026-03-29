@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Stats Center – Technical Design Document</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root{--brand:#6366f1;--brand-light:#818cf8;--bg:#0f0f13;--surface:#16161d;--surface2:#1e1e28;--border:#2a2a38;--text:#e5e5f0;--muted:#888899;--green:#22c55e;--amber:#f59e0b;--red:#ef4444;--cyan:#22d3ee;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);line-height:1.7;font-size:15px;}
+  a{color:var(--brand-light);text-decoration:none;}
+  a:hover{text-decoration:underline;}
+
+  /* LAYOUT */
+  .wrapper{display:flex;min-height:100vh;}
+  nav{width:260px;min-width:260px;background:var(--surface);border-right:1px solid var(--border);position:sticky;top:0;height:100vh;overflow-y:auto;padding:24px 0;}
+  main{flex:1;padding:48px 64px;max-width:960px;}
+
+  /* NAV */
+  .nav-logo{padding:0 24px 20px;border-bottom:1px solid var(--border);margin-bottom:16px;}
+  .nav-logo h2{font-size:16px;font-weight:700;color:var(--brand-light);}
+  .nav-logo p{font-size:11px;color:var(--muted);margin-top:2px;}
+  nav ul{list-style:none;}
+  nav ul li a{display:block;padding:6px 24px;font-size:13px;color:var(--muted);border-left:3px solid transparent;transition:all .15s;}
+  nav ul li a:hover,nav ul li a.active{color:var(--text);border-left-color:var(--brand);background:rgba(99,102,241,.08);text-decoration:none;}
+  .nav-section{padding:12px 24px 4px;font-size:10px;font-weight:600;color:var(--brand);text-transform:uppercase;letter-spacing:.08em;}
+
+  /* HEADINGS */
+  h1{font-size:36px;font-weight:700;line-height:1.2;margin-bottom:8px;background:linear-gradient(135deg,#e5e5f0,#818cf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+  h2{font-size:22px;font-weight:600;color:var(--text);margin:48px 0 16px;padding-bottom:10px;border-bottom:1px solid var(--border);}
+  h3{font-size:16px;font-weight:600;color:var(--brand-light);margin:28px 0 10px;}
+  h4{font-size:14px;font-weight:600;color:var(--text);margin:18px 0 6px;}
+
+  /* HERO */
+  .hero{margin-bottom:48px;}
+  .hero-meta{display:flex;gap:24px;flex-wrap:wrap;margin-top:16px;}
+  .meta-pill{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);}
+  .meta-pill span{color:var(--text);font-weight:500;}
+  .status-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(34,197,94,.12);color:var(--green);border:1px solid rgba(34,197,94,.25);border-radius:20px;padding:3px 10px;font-size:12px;font-weight:500;}
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 1.8s ease infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+
+  /* SECTION */
+  section{margin-bottom:56px;}
+  p{margin-bottom:14px;color:var(--text);}
+
+  /* CALLOUT */
+  .callout{border-left:3px solid var(--brand);background:rgba(99,102,241,.08);border-radius:4px;padding:14px 18px;margin:16px 0;font-size:14px;}
+  .callout.green{border-left-color:var(--green);background:rgba(34,197,94,.06);}
+  .callout.amber{border-left-color:var(--amber);background:rgba(245,158,11,.06);}
+
+  /* TABLE */
+  table{width:100%;border-collapse:collapse;margin:16px 0;font-size:13px;}
+  th{background:var(--surface2);color:var(--brand-light);font-weight:600;text-align:left;padding:10px 14px;border:1px solid var(--border);}
+  td{padding:9px 14px;border:1px solid var(--border);color:var(--text);}
+  tr:nth-child(even) td{background:rgba(255,255,255,.02);}
+
+  /* CODE */
+  pre{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:18px 20px;overflow-x:auto;margin:16px 0;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:1.6;}
+  code{font-family:'JetBrains Mono',monospace;font-size:12.5px;background:rgba(99,102,241,.15);color:var(--brand-light);padding:1px 5px;border-radius:3px;}
+  pre code{background:none;padding:0;color:#c9d1d9;}
+  .keyword{color:#ff79c6;}
+  .string{color:#f1fa8c;}
+  .comment{color:#6272a4;}
+  .type{color:var(--cyan);}
+  .fn{color:#50fa7b;}
+
+  /* DIAGRAM */
+  .diagram{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:24px;margin:16px 0;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.8;color:var(--muted);overflow-x:auto;}
+  .diagram .highlight{color:var(--brand-light);}
+  .diagram .arrow{color:var(--brand);}
+
+  /* CARDS */
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin:16px 0;}
+  .card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:18px;transition:border-color .2s;}
+  .card:hover{border-color:var(--brand);}
+  .card-icon{font-size:22px;margin-bottom:10px;}
+  .card-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px;}
+  .card-desc{font-size:12px;color:var(--muted);line-height:1.5;}
+
+  /* SSE EVENTS */
+  .event-list{display:flex;flex-direction:column;gap:8px;margin:16px 0;}
+  .event-row{display:flex;align-items:flex-start;gap:12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:12px 14px;}
+  .event-tag{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;white-space:nowrap;}
+  .tag-status{background:rgba(34,197,94,.15);color:var(--green);}
+  .tag-sql{background:rgba(99,102,241,.15);color:var(--brand-light);}
+  .tag-table{background:rgba(34,211,238,.15);color:var(--cyan);}
+  .tag-chart{background:rgba(245,158,11,.15);color:var(--amber);}
+  .tag-summary{background:rgba(139,92,246,.15);color:#a78bfa;}
+  .tag-error{background:rgba(239,68,68,.15);color:var(--red);}
+  .tag-done{background:rgba(136,136,153,.15);color:var(--muted);}
+  .event-desc{font-size:13px;color:var(--muted);}
+  .event-desc strong{color:var(--text);}
+
+  /* API TABLE rows */
+  .method{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;padding:2px 7px;border-radius:4px;}
+  .get{background:rgba(34,197,94,.15);color:var(--green);}
+  .post{background:rgba(99,102,241,.15);color:var(--brand-light);}
+  .del{background:rgba(239,68,68,.15);color:var(--red);}
+  .patch{background:rgba(245,158,11,.15);color:var(--amber);}
+
+  /* PHASE TIMELINE */
+  .timeline{margin:16px 0;}
+  .phase{display:flex;gap:16px;margin-bottom:20px;}
+  .phase-line{display:flex;flex-direction:column;align-items:center;}
+  .phase-dot{width:12px;height:12px;border-radius:50%;background:var(--brand);flex-shrink:0;margin-top:4px;}
+  .phase-dot.done{background:var(--green);}
+  .phase-dot.pending{background:var(--muted);}
+  .phase-stem{width:2px;flex:1;background:var(--border);margin-top:4px;}
+  .phase-body h4{font-size:14px;font-weight:600;margin-bottom:4px;}
+  .phase-body p{font-size:13px;color:var(--muted);margin:0;}
+
+  /* FOOTER */
+  footer{margin-top:80px;padding-top:24px;border-top:1px solid var(--border);font-size:12px;color:var(--muted);}
+
+  @media(max-width:768px){
+    nav{display:none;}
+    main{padding:24px 20px;}
+    h1{font-size:26px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrapper">
+
+<!-- ── SIDEBAR NAV ──────────────────────────────────────── -->
+<nav>
+  <div class="nav-logo">
+    <h2>📊 Stats Center</h2>
+    <p>Technical Design Document</p>
+  </div>
+  <ul>
+    <li class="nav-section">Overview</li>
+    <li><a href="#overview">Project Overview</a></li>
+    <li><a href="#goals">Goals &amp; Scope</a></li>
+    <li><a href="#stack">Technology Stack</a></li>
+
+    <li class="nav-section">Architecture</li>
+    <li><a href="#system-arch">System Architecture</a></li>
+    <li><a href="#request-flow">Request Flow</a></li>
+    <li><a href="#data-layer">Data Layer</a></li>
+
+    <li class="nav-section">Backend</li>
+    <li><a href="#backend">FastAPI Application</a></li>
+    <li><a href="#agent">Vanna Agent Pipeline</a></li>
+    <li><a href="#llm">LLM Service</a></li>
+    <li><a href="#session">Session Management</a></li>
+    <li><a href="#router">Semantic Router</a></li>
+
+    <li class="nav-section">API</li>
+    <li><a href="#api-ref">REST API Reference</a></li>
+    <li><a href="#sse">SSE Event Schema</a></li>
+
+    <li class="nav-section">Frontend</li>
+    <li><a href="#frontend">Frontend Architecture</a></li>
+    <li><a href="#components">UI Components</a></li>
+
+    <li class="nav-section">Infrastructure</li>
+    <li><a href="#infra">Deployment</a></li>
+    <li><a href="#config">Configuration</a></li>
+    <li><a href="#db-schema">Database Schema</a></li>
+
+    <li class="nav-section">Roadmap</li>
+    <li><a href="#roadmap">Phase Roadmap</a></li>
+    <li><a href="#risks">Risks &amp; Mitigations</a></li>
+  </ul>
+</nav>
+
+<!-- ── MAIN CONTENT ─────────────────────────────────────── -->
+<main>
+
+  <!-- HERO -->
+  <div class="hero" id="overview">
+    <h1>Stats Center</h1>
+    <p style="font-size:18px;color:var(--muted);margin-top:6px;">Conversational Analytics Platform — Technical Design Document</p>
+    <div class="hero-meta">
+      <div class="meta-pill">📅 Version <span>0.1.0</span></div>
+      <div class="meta-pill">📁 Repo <span>prompt-to-chart</span></div>
+      <div class="meta-pill">🗓 Date <span>March 2026</span></div>
+      <div class="meta-pill">✍️ Author <span>Product &amp; Engineering</span></div>
+      <div class="status-badge"><div class="dot"></div>Active Development</div>
+    </div>
+  </div>
+
+  <!-- EXECUTIVE SUMMARY -->
+  <section>
+    <h2>Executive Summary</h2>
+    <p>Stats Center is an internal conversational analytics platform that allows users to query business data using plain English. The system automatically translates natural-language questions into SQL, executes them against a StarRocks analytical database, and returns interactive Plotly charts — all in real-time via Server-Sent Events (SSE).</p>
+    <p>The platform eliminates the SQL knowledge barrier for data exploration, enables iterative follow-up queries using session context, and surfaces AI-generated insights alongside every chart — making analytics accessible to every business stakeholder.</p>
+    <div class="callout green">
+      <strong>Core Value Proposition:</strong> Ask a question in plain English → get an interactive chart and natural-language insight in under 10 seconds, with no SQL knowledge required.
+    </div>
+  </section>
+
+  <!-- GOALS -->
+  <section id="goals">
+    <h2>Goals &amp; Scope</h2>
+    <h3>In Scope (v0.1)</h3>
+    <table>
+      <tr><th>Goal</th><th>Description</th></tr>
+      <tr><td>NL → SQL</td><td>Translate natural-language questions to valid StarRocks SQL using a local LLM.</td></tr>
+      <tr><td>Interactive Charts</td><td>Auto-generate appropriate Plotly chart types (bar, line, pie, scatter, heatmap).</td></tr>
+      <tr><td>Follow-up Queries</td><td>Maintain session context to support iterative refinement of charts and queries.</td></tr>
+      <tr><td>Real-time Streaming</td><td>Stream all pipeline stages to the UI via SSE for immediate feedback.</td></tr>
+      <tr><td>Chat History</td><td>Persist sessions with folder organization, drag-and-drop, and cascading delete.</td></tr>
+      <tr><td>Data Table View</td><td>Show raw tabular results alongside every chart.</td></tr>
+      <tr><td>Debug Panel</td><td>Expose LLM prompts and intermediate steps for internal debugging.</td></tr>
+    </table>
+
+    <h3>Out of Scope (v0.1)</h3>
+    <table>
+      <tr><th>Feature</th><th>Planned Phase</th></tr>
+      <tr><td>CSV / JSON data export</td><td>Phase 3</td></tr>
+      <tr><td>User authentication / multi-tenancy</td><td>Phase 3</td></tr>
+      <tr><td>Scheduled reports / email delivery</td><td>Phase 4</td></tr>
+      <tr><td>Custom chart theming UI</td><td>Phase 3</td></tr>
+      <tr><td>Vector embeddings for schema retrieval (full Vanna)</td><td>Phase 2</td></tr>
+    </table>
+  </section>
+
+  <!-- TECH STACK -->
+  <section id="stack">
+    <h2>Technology Stack</h2>
+    <div class="cards">
+      <div class="card">
+        <div class="card-icon">⚡</div>
+        <div class="card-title">FastAPI 0.115</div>
+        <div class="card-desc">Async Python web framework. Handles SSE streaming, dependency injection, OpenAPI docs.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">🧠</div>
+        <div class="card-title">Qwen2.5-Coder 7B</div>
+        <div class="card-desc">Local LLM served via Ollama. Handles SQL generation, chart JSON, and summaries.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">🗄️</div>
+        <div class="card-title">StarRocks 3.3</div>
+        <div class="card-desc">MPP analytical database. MySQL-wire protocol. OBT schema for fast single-table scans.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">🔴</div>
+        <div class="card-title">Redis 7</div>
+        <div class="card-desc">Session storage with TTL-based expiration. Stores conversation history, last SQL, and chart JSON.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">⚛️</div>
+        <div class="card-title">React 19 + Vite 8</div>
+        <div class="card-desc">Frontend SPA. Consumes SSE stream, renders Plotly charts via react-plotly.js.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">📊</div>
+        <div class="card-title">Plotly.js 3.4</div>
+        <div class="card-desc">Interactive charting library. Chart type and config determined by LLM at runtime.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">🐳</div>
+        <div class="card-title">Docker Compose</div>
+        <div class="card-desc">Full dev stack orchestration: StarRocks, Redis, Backend, Frontend in one command.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">📦</div>
+        <div class="card-title">Pydantic v2</div>
+        <div class="card-desc">Settings management, request/response validation throughout the backend.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SYSTEM ARCHITECTURE -->
+  <section id="system-arch">
+    <h2>System Architecture</h2>
+    <div class="diagram">
+<span class="highlight">┌─────────────────────────────────────────────────────────┐</span>
+<span class="highlight">│                     Browser (React SPA)                  │</span>
+<span class="highlight">│  Sidebar │ ChatPanel │ ChartRenderer │ DataTable │ SQL    │</span>
+<span class="highlight">└──────────────────────┬──────────────────────────────────┘</span>
+                       <span class="arrow">│  HTTP POST /api/chat  (SSE)</span>
+                       <span class="arrow">▼</span>
+<span class="highlight">┌─────────────────────────────────────────────────────────┐</span>
+<span class="highlight">│               FastAPI Backend (Port 8000)                │</span>
+<span class="highlight">│  ┌─────────────────────────────────────────────────┐    │</span>
+<span class="highlight">│  │  CORSMiddleware → Router → chat_sse()           │    │</span>
+<span class="highlight">│  │         │                                       │    │</span>
+<span class="highlight">│  │  SemanticRouter ──── classify intent ────────── │    │</span>
+<span class="highlight">│  │         │                                       │    │</span>
+<span class="highlight">│  │  VannaAgent Pipeline                            │    │</span>
+<span class="highlight">│  │    ├── generate_sql()   → OllamaLlmService      │    │</span>
+<span class="highlight">│  │    ├── execute_sql()    → StarRocksRunner        │    │</span>
+<span class="highlight">│  │    ├── generate_chart() → OllamaLlmService      │    │</span>
+<span class="highlight">│  │    └── generate_summary() → OllamaLlmService    │    │</span>
+<span class="highlight">│  └─────────────────────────────────────────────────┘    │</span>
+<span class="highlight">└──────────┬───────────────────────┬──────────────────────┘</span>
+           <span class="arrow">│</span>                       <span class="arrow">│</span>
+           <span class="arrow">▼</span>                       <span class="arrow">▼</span>
+<span class="highlight">┌─────────────────┐    ┌──────────────────────────────────┐</span>
+<span class="highlight">│  Redis 7        │    │  StarRocks 3.3 (Port 9030)       │</span>
+<span class="highlight">│  session:*      │    │  Database: stats_center          │</span>
+<span class="highlight">│  folders:all    │    │  Table: sales_analytics (OBT)    │</span>
+<span class="highlight">└─────────────────┘    └──────────────────────────────────┘</span>
+           <span class="arrow">│</span>
+           <span class="arrow">▼</span>
+<span class="highlight">┌─────────────────┐</span>
+<span class="highlight">│  Ollama Server  │</span>
+<span class="highlight">│  Port 11434/v1  │</span>
+<span class="highlight">│  qwen2.5-coder  │</span>
+<span class="highlight">│  :7b            │</span>
+<span class="highlight">└─────────────────┘</span>
+    </div>
+  </section>
+
+  <!-- REQUEST FLOW -->
+  <section id="request-flow">
+    <h2>End-to-End Request Flow</h2>
+    <p>The following sequence describes what happens from the moment the user submits a question until the chart renders.</p>
+    <pre><code><span class="comment">// Step-by-step flow for a new query</span>
+
+1. User types question → React calls streamChat(message, session_id)
+2. Frontend: POST /api/chat  { message, session_id }
+3. Backend:  Resolve or create Redis session
+4. Backend:  SemanticRouter.classify(message) via LLM
+            → returns: "chart_query" | "follow_up" | "clarification" | "export"
+5. SSE event emitted: { type:"status", data:"Processing your question..." }
+6. VannaAgent.load_schema()  → SHOW CREATE TABLE * from StarRocks (cached)
+7. VannaAgent.generate_sql() → LLM call with schema DDL + history context
+8. SSE event: { type:"sql", data:"SELECT ..." }
+9. VannaAgent.execute_sql()  → pymysql → StarRocks → pandas DataFrame
+10. SSE event: { type:"table", data:{ columns, rows } }
+11. VannaAgent.generate_chart() → LLM infers best chart type → Plotly JSON
+12. SSE event: { type:"plotly_chart", data:{ data:[], layout:{} } }
+13. VannaAgent.generate_summary() → LLM writes 2-3 sentence insight
+14. SSE event: { type:"summary", data:"..." }
+15. RedisSessionManager.update_last_result(sql, result, chart)
+16. SSE event: { type:"done", data:null }
+17. Frontend: Plotly chart renders, SQL panel updates, summary displays</code></pre>
+  </section>
+
+  <!-- DATA LAYER -->
+  <section id="data-layer">
+    <h2>Data Layer</h2>
+    <h3>StarRocks OBT Schema</h3>
+    <p>The database uses a single <strong>One Big Table (OBT)</strong> design pattern — <code>sales_analytics</code> — that denormalizes all dimensions into one wide table for maximum query performance without JOINs.</p>
+    <table>
+      <tr><th>Column Group</th><th>Columns</th><th>Purpose</th></tr>
+      <tr><td>Order</td><td>order_id, order_date, order_month, order_quarter, order_year</td><td>Time-series bucketing</td></tr>
+      <tr><td>Product</td><td>product_id, product_name, category, subcategory, brand, unit_price</td><td>Product analytics</td></tr>
+      <tr><td>Customer</td><td>customer_id, customer_name, customer_segment, customer_age_group</td><td>Segmentation</td></tr>
+      <tr><td>Geography</td><td>region, country, city</td><td>Geo analysis (APAC/EMEA/NA/LATAM)</td></tr>
+      <tr><td>Sales Metrics</td><td>quantity, revenue, cost, profit, discount_pct</td><td>Financial KPIs</td></tr>
+      <tr><td>Channel</td><td>sales_channel, payment_method</td><td>Channel mix analysis</td></tr>
+      <tr><td>Fulfillment</td><td>shipping_mode, ship_days, return_flag</td><td>Ops metrics</td></tr>
+    </table>
+    <pre><code><span class="keyword">CREATE TABLE</span> sales_analytics (
+  order_id       <span class="type">BIGINT</span>,
+  order_date     <span class="type">DATE</span>,
+  order_month    <span class="type">VARCHAR(7)</span>,     <span class="comment">-- 'YYYY-MM'</span>
+  order_quarter  <span class="type">VARCHAR(6)</span>,     <span class="comment">-- 'e.g. 2025Q1'</span>
+  ...
+  revenue        <span class="type">DECIMAL(12,2)</span>,
+  profit         <span class="type">DECIMAL(12,2)</span>,
+  return_flag    <span class="type">BOOLEAN</span>
+)
+<span class="keyword">DUPLICATE KEY</span>(order_id)
+<span class="keyword">DISTRIBUTED BY HASH</span>(order_id) <span class="keyword">BUCKETS</span> 4
+<span class="keyword">PROPERTIES</span> (<span class="string">"replication_num"</span> = <span class="string">"1"</span>);</code></pre>
+
+    <h3>Redis Data Model</h3>
+    <table>
+      <tr><th>Key Pattern</th><th>Type</th><th>Content</th><th>TTL</th></tr>
+      <tr><td><code>session:{uuid}</code></td><td>String (JSON)</td><td>SessionData: title, folder_id, history[], last_sql, last_result, last_chart</td><td>1800s (30 min, rolling)</td></tr>
+      <tr><td><code>folders:all</code></td><td>Hash</td><td>folder_id → FolderData JSON</td><td>No TTL</td></tr>
+    </table>
+  </section>
+
+  <!-- BACKEND -->
+  <section id="backend">
+    <h2>Backend — FastAPI Application</h2>
+    <h3>Directory Structure</h3>
+    <pre><code>backend/
+├── app/
+│   ├── main.py          <span class="comment"># FastAPI entrypoint + lifespan (Redis init/close)</span>
+│   ├── config.py        <span class="comment"># Pydantic Settings from env vars</span>
+│   ├── dependencies.py  <span class="comment"># DI providers: get_redis, get_agent, get_settings</span>
+│   └── routers/
+│       ├── chat.py      <span class="comment"># /api/chat (SSE), sessions, folders endpoints</span>
+│       └── health.py    <span class="comment"># /health/live, /health/ready</span>
+├── core/
+│   ├── vanna_agent.py      <span class="comment"># NL→SQL→Chart→Summary pipeline</span>
+│   ├── llm_service.py      <span class="comment"># OpenAI-compat adapter for Ollama/Qwen</span>
+│   ├── starrocks_runner.py <span class="comment"># pymysql runner → pandas DataFrame</span>
+│   └── redis_session.py    <span class="comment"># Session CRUD + SemanticRouter</span>
+└── requirements.txt</code></pre>
+
+    <h3>Key Design Decisions</h3>
+    <div class="callout">
+      <strong>Singleton Agent via DI:</strong> <code>VannaAgent</code> is instantiated once at startup via FastAPI's dependency injection. This prevents re-loading the schema DDL on every request and keeps LLM clients alive across the process lifetime.
+    </div>
+    <div class="callout amber">
+      <strong>Thread-safe SQL Execution:</strong> <code>StarRocksRunner.run_sql()</code> is synchronous (pymysql). It is wrapped with <code>asyncio.to_thread()</code> to prevent blocking the async event loop. A new pymysql connection is created and closed per request — no connection pooling yet.
+    </div>
+  </section>
+
+  <!-- AGENT PIPELINE -->
+  <section id="agent">
+    <h2>Vanna Agent Pipeline</h2>
+    <p>The <code>VannaAgent</code> class in <code>core/vanna_agent.py</code> orchestrates four sequential LLM calls per query.</p>
+    <table>
+      <tr><th>Stage</th><th>Method</th><th>Input</th><th>Output</th></tr>
+      <tr><td>1. Schema Load</td><td><code>load_schema()</code></td><td>StarRocks <code>SHOW CREATE TABLE</code></td><td>DDL string (cached in memory)</td></tr>
+      <tr><td>2. SQL Generation</td><td><code>generate_sql()</code></td><td>schema DDL + history context + user question</td><td>SQL string</td></tr>
+      <tr><td>3. SQL Execution</td><td><code>execute_sql()</code></td><td>SQL string</td><td><code>{ columns, rows, row_count }</code></td></tr>
+      <tr><td>4. Chart Generation</td><td><code>generate_chart()</code></td><td>question + DataFrame preview + column types</td><td>Plotly figure JSON <code>{ data, layout }</code></td></tr>
+      <tr><td>5. Summary</td><td><code>generate_summary()</code></td><td>question + top-10 rows preview</td><td>2–3 sentence natural-language insight</td></tr>
+    </table>
+    <h3>Follow-up Query Handling</h3>
+    <p>When the <code>SemanticRouter</code> classifies intent as <code>follow_up</code>, the agent injects a system message containing the <strong>previous SQL</strong> before calling the LLM. This allows the model to intelligently modify (e.g., change filters, add dimensions) or reuse (e.g., chart type changes) the prior query.</p>
+    <pre><code><span class="keyword">if</span> intent == <span class="string">"follow_up"</span> <span class="keyword">and</span> session.last_sql:
+    system_msg = (
+        <span class="string">f"Previous SQL:\n```sql\n{session.last_sql}\n```\n"</span>
+        <span class="string">"If user wants to change chart type only, output EXACT same SQL."</span>
+    )
+    history.append({<span class="string">"role"</span>: <span class="string">"system"</span>, <span class="string">"content"</span>: system_msg})</code></pre>
+  </section>
+
+  <!-- LLM SERVICE -->
+  <section id="llm">
+    <h2>LLM Service</h2>
+    <p><code>OllamaLlmService</code> uses the OpenAI Python SDK pointed at Ollama's OpenAI-compatible endpoint (<code>http://localhost:11434/v1</code>). This means the LLM provider can be swapped to any OpenAI-compatible API (OpenAI, Azure, vLLM) by changing a single env var.</p>
+    <table>
+      <tr><th>Setting</th><th>Default</th><th>Description</th></tr>
+      <tr><td><code>OLLAMA_MODEL</code></td><td>qwen2.5-coder:7b</td><td>Model name</td></tr>
+      <tr><td><code>LLM_TEMPERATURE</code></td><td>0.0</td><td>Deterministic SQL generation</td></tr>
+      <tr><td><code>LLM_MAX_TOKENS</code></td><td>4096</td><td>Max response tokens</td></tr>
+      <tr><td><code>LLM_TIMEOUT_SECONDS</code></td><td>120</td><td>Per-request timeout</td></tr>
+    </table>
+    <h3>StarRocks System Prompt</h3>
+    <p>A dedicated system prompt is used for SQL generation to constrain model behavior:</p>
+    <ul style="margin:12px 0 12px 20px;color:var(--muted);font-size:13px;line-height:2;">
+      <li>Generate valid StarRocks SQL (MySQL-compatible dialect)</li>
+      <li>Use schema table/column names exactly</li>
+      <li>Always use column aliases; always include GROUP BY for aggregations</li>
+      <li>Limit to 1000 rows unless otherwise specified</li>
+      <li>Prefer <code>APPROX_COUNT_DISTINCT</code> over <code>COUNT(DISTINCT ...)</code> for large datasets</li>
+      <li>Return <strong>only</strong> the SQL — no markdown, no explanation</li>
+    </ul>
+  </section>
+
+  <!-- SESSION MANAGEMENT -->
+  <section id="session">
+    <h2>Session Management</h2>
+    <p><code>RedisSessionManager</code> provides CRUD operations over Redis using key prefix <code>session:{uuid}</code> with a rolling 30-minute TTL (refreshed on every access).</p>
+    <h3>SessionData Fields</h3>
+    <table>
+      <tr><th>Field</th><th>Type</th><th>Purpose</th></tr>
+      <tr><td>session_id</td><td>str (UUID)</td><td>Primary key</td></tr>
+      <tr><td>title</td><td>str</td><td>Auto-set from first message (first 40 chars)</td></tr>
+      <tr><td>folder_id</td><td>str | None</td><td>Folder assignment for sidebar organization</td></tr>
+      <tr><td>created_at</td><td>float (unix)</td><td>Used for sorting in sidebar (newest first)</td></tr>
+      <tr><td>history</td><td>list[dict]</td><td>Chat messages: <code>[{role, content}]</code>, last 6 used as LLM context</td></tr>
+      <tr><td>last_sql</td><td>str | None</td><td>Injected as context for follow-up queries</td></tr>
+      <tr><td>last_result</td><td>dict | None</td><td>Cached for future export feature</td></tr>
+      <tr><td>last_chart</td><td>dict | None</td><td>Cached Plotly JSON for follow-up chart type changes</td></tr>
+    </table>
+
+    <h3>Folder Management</h3>
+    <p>Folders are stored as a Redis Hash at <code>folders:all</code>. Sessions reference their folder via <code>folder_id</code>. When a folder is deleted:</p>
+    <ul style="margin:8px 0 8px 20px;color:var(--muted);font-size:13px;line-height:2;">
+      <li><strong>delete_conversations=true</strong>: All sessions in folder are deleted from Redis.</li>
+      <li><strong>delete_conversations=false</strong> (default): Sessions are moved to root (folder_id → None).</li>
+    </ul>
+  </section>
+
+  <!-- SEMANTIC ROUTER -->
+  <section id="router">
+    <h2>Semantic Router</h2>
+    <p>Before invoking the full Vanna pipeline, every user message is classified into one of four intents:</p>
+    <table>
+      <tr><th>Intent</th><th>Trigger</th><th>Action</th></tr>
+      <tr><td><code>chart_query</code></td><td>New, unrelated data question</td><td>Full NL→SQL→Chart pipeline</td></tr>
+      <tr><td><code>follow_up</code></td><td>Refinement of previous result</td><td>Pipeline with previous SQL injected into context</td></tr>
+      <tr><td><code>clarification</code></td><td>Too short or ambiguous</td><td>Return clarification prompt immediately (no SQL)</td></tr>
+      <tr><td><code>export</code></td><td>Contains "export", "csv", "download"</td><td>Return placeholder message (Phase 3)</td></tr>
+    </table>
+    <p>Classification uses an LLM call with a tight prompt and <code>max_tokens=10</code>. If the LLM call fails, a keyword-based heuristic fallback is used (checking for words like "change", "also", "what about", "make it a pie chart", etc.).</p>
+  </section>
+
+  <!-- API REFERENCE -->
+  <section id="api-ref">
+    <h2>REST API Reference</h2>
+    <p>All endpoints are prefixed <code>/api</code>. Interactive docs available at <code>http://localhost:8000/docs</code>.</p>
+    <table>
+      <tr><th>Method</th><th>Endpoint</th><th>Description</th></tr>
+      <tr><td><span class="method post">POST</span></td><td><code>/api/chat</code></td><td>Main chat endpoint. Returns SSE stream.</td></tr>
+      <tr><td><span class="method get">GET</span></td><td><code>/api/sessions</code></td><td>List all sessions (newest first).</td></tr>
+      <tr><td><span class="method post">POST</span></td><td><code>/api/sessions</code></td><td>Create a new empty session.</td></tr>
+      <tr><td><span class="method del">DELETE</span></td><td><code>/api/sessions/{id}</code></td><td>Delete a session by ID.</td></tr>
+      <tr><td><span class="method patch">PATCH</span></td><td><code>/api/sessions/{id}</code></td><td>Move session to a folder (<code>{ folder_id }</code>).</td></tr>
+      <tr><td><span class="method get">GET</span></td><td><code>/api/sessions/{id}/history</code></td><td>Get full message history for a session.</td></tr>
+      <tr><td><span class="method get">GET</span></td><td><code>/api/folders</code></td><td>List all folders.</td></tr>
+      <tr><td><span class="method post">POST</span></td><td><code>/api/folders</code></td><td>Create a folder (<code>{ name }</code>).</td></tr>
+      <tr><td><span class="method del">DELETE</span></td><td><code>/api/folders/{id}</code></td><td>Delete folder. Query param: <code>delete_conversations=true|false</code>.</td></tr>
+      <tr><td><span class="method get">GET</span></td><td><code>/health/live</code></td><td>Liveness probe.</td></tr>
+      <tr><td><span class="method get">GET</span></td><td><code>/health/ready</code></td><td>Readiness probe (checks Redis + StarRocks).</td></tr>
+    </table>
+
+    <h3>Chat Request Body</h3>
+    <pre><code>{
+  <span class="string">"message"</span>:    <span class="string">"Show me revenue by region for 2024"</span>,  <span class="comment">// required, 1-2000 chars</span>
+  <span class="string">"session_id"</span>: <span class="string">"550e8400-e29b..."</span>                  <span class="comment">// optional — omit for new session</span>
+}</code></pre>
+  </section>
+
+  <!-- SSE EVENTS -->
+  <section id="sse">
+    <h2>SSE Event Schema</h2>
+    <p>The <code>/api/chat</code> endpoint streams <code>text/event-stream</code> with typed JSON payloads. Each line is:</p>
+    <pre><code>data: {"type":"&lt;event_type&gt;","data":&lt;payload&gt;}
+
+</code></pre>
+    <div class="event-list">
+      <div class="event-row">
+        <span class="event-tag tag-status">status</span>
+        <div class="event-desc"><strong>string</strong> — Progress message. First event includes <code>session_id</code>. E.g. "Analyzing database schema..."</div>
+      </div>
+      <div class="event-row">
+        <span class="event-tag tag-sql">sql</span>
+        <div class="event-desc"><strong>string</strong> — The generated SQL query. Rendered in the SQL viewer panel.</div>
+      </div>
+      <div class="event-row">
+        <span class="event-tag tag-table">table</span>
+        <div class="event-desc"><strong>{ columns: string[], rows: any[][] }</strong> — Raw query results for the data table component.</div>
+      </div>
+      <div class="event-row">
+        <span class="event-tag tag-chart">plotly_chart</span>
+        <div class="event-desc"><strong>{ data: [], layout: {} }</strong> — Full Plotly figure spec. Passed directly to <code>&lt;Plot /&gt;</code>.</div>
+      </div>
+      <div class="event-row">
+        <span class="event-tag tag-summary">summary</span>
+        <div class="event-desc"><strong>string</strong> — 2–3 sentence natural-language insight from the LLM.</div>
+      </div>
+      <div class="event-row">
+        <span class="event-tag tag-error">error</span>
+        <div class="event-desc"><strong>{ message: string, code: string }</strong> — Pipeline error. Displayed inline. Always followed by <code>done</code>.</div>
+      </div>
+      <div class="event-row">
+        <span class="event-tag tag-done">done</span>
+        <div class="event-desc"><strong>null</strong> — Stream terminator. Frontend closes the reader and re-enables the input.</div>
+      </div>
+      <div class="event-row">
+        <span class="event-tag tag-sql">debug</span>
+        <div class="event-desc"><strong>{ step, messages, system_prompt? }</strong> — LLM prompt debug info. Visible in the Debug panel (internal use).</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FRONTEND -->
+  <section id="frontend">
+    <h2>Frontend Architecture</h2>
+    <p>The frontend is a Vite + React 19 SPA. It communicates with the backend exclusively through the SSE chat endpoint and the REST sessions/folders API.</p>
+    <h3>State Management</h3>
+    <p>There is no global state library (Redux, Zustand). All chat state is managed in the <code>useChat</code> custom hook, which is owned by <code>AppContent</code> and passed to child components as props.</p>
+    <pre><code><span class="comment">// hooks/useChat.js — exported state &amp; actions</span>
+<span class="keyword">const</span> {
+  messages,     <span class="comment">// Message[] — rendered chat bubbles</span>
+  isStreaming,  <span class="comment">// bool — disables input field</span>
+  sessionId,    <span class="comment">// string | null</span>
+  sendMessage,  <span class="comment">// (text) => void — triggers SSE stream</span>
+  cancelStream, <span class="comment">// () => void — AbortController.abort()</span>
+  clearChat,    <span class="comment">// () => void — reset messages</span>
+  loadSession,  <span class="comment">// (id) => void — load history from API</span>
+  createSession <span class="comment">// () => void — POST /api/sessions</span>
+} = useChat();</code></pre>
+  </section>
+
+  <!-- UI COMPONENTS -->
+  <section id="components">
+    <h2>UI Components</h2>
+    <div class="cards">
+      <div class="card">
+        <div class="card-icon">💬</div>
+        <div class="card-title">ChatPanel</div>
+        <div class="card-desc">Main chat interface. Renders message bubbles, streaming status, input bar with send/cancel, and clear button.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">📁</div>
+        <div class="card-title">Sidebar</div>
+        <div class="card-desc">Collapsible history panel. Folder creation, drag-and-drop sessions between folders, cascading delete modal.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">📊</div>
+        <div class="card-title">ChartRenderer</div>
+        <div class="card-desc">Wraps react-plotly.js. Applies dark theme overrides (paper_bgcolor, plot_bgcolor transparent).</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">🗂️</div>
+        <div class="card-title">DataTable</div>
+        <div class="card-desc">Scrollable tabular view of raw query results. Columns auto-sized. Shown alongside every chart.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">🔍</div>
+        <div class="card-title">SqlViewer</div>
+        <div class="card-desc">Syntax-highlighted SQL display. Collapsible. Shows the exact query executed against StarRocks.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">🐛</div>
+        <div class="card-title">DebugViewer</div>
+        <div class="card-desc">Internal panel showing LLM prompt steps: intent classification, SQL generation, chart generation messages.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DEPLOYMENT -->
+  <section id="infra">
+    <h2>Deployment &amp; Infrastructure</h2>
+    <h3>Local Development</h3>
+    <table>
+      <tr><th>Service</th><th>Port</th><th>Command</th></tr>
+      <tr><td>Backend (FastAPI + uvicorn)</td><td>8000</td><td><code>uvicorn app.main:app --reload</code></td></tr>
+      <tr><td>Frontend (Vite dev server)</td><td>5173</td><td><code>npm run dev</code></td></tr>
+      <tr><td>Redis</td><td>6379</td><td>Docker or local install</td></tr>
+      <tr><td>StarRocks</td><td>9030 (MySQL), 8030 (HTTP), 8040 (BE)</td><td>Docker: <code>starrocks/allin1-ubuntu:3.3-latest</code></td></tr>
+      <tr><td>Ollama</td><td>11434</td><td><code>ollama serve</code> + <code>ollama run qwen2.5-coder:7b</code></td></tr>
+    </table>
+    <h3>Docker Compose Full Stack</h3>
+    <pre><code><span class="comment"># Start the full stack</span>
+docker-compose up
+
+<span class="comment"># Initialize database schema</span>
+mysql -h 127.0.0.1 -P 9030 -u root &lt; db/init.sql</code></pre>
+
+    <h3>Production Considerations</h3>
+    <div class="callout amber">
+      <strong>Not yet production-hardened.</strong> The following are required before any production deployment: authentication/authorization, rate limiting enforcement, connection pooling for StarRocks, Redis persistence/clustering, secrets management (currently loaded from <code>.env</code>), and HTTPS termination.
+    </div>
+  </section>
+
+  <!-- CONFIGURATION -->
+  <section id="config">
+    <h2>Configuration Reference</h2>
+    <p>All settings are loaded from <code>backend/.env</code> via <code>pydantic-settings</code>. Environment variables override defaults.</p>
+    <table>
+      <tr><th>Variable</th><th>Default</th><th>Description</th></tr>
+      <tr><td><code>APP_NAME</code></td><td>Stats Center</td><td>Application display name</td></tr>
+      <tr><td><code>DEBUG</code></td><td>false</td><td>Enables DEBUG log level</td></tr>
+      <tr><td><code>CORS_ORIGINS</code></td><td>["http://localhost:5173"]</td><td>Allowed CORS origins</td></tr>
+      <tr><td><code>STARROCKS_HOST</code></td><td>localhost</td><td>StarRocks FE host</td></tr>
+      <tr><td><code>STARROCKS_PORT</code></td><td>9030</td><td>StarRocks MySQL protocol port</td></tr>
+      <tr><td><code>STARROCKS_DATABASE</code></td><td>stats_center</td><td>Target database name</td></tr>
+      <tr><td><code>REDIS_URL</code></td><td>redis://localhost:6379/0</td><td>Redis connection URL</td></tr>
+      <tr><td><code>SESSION_TTL_SECONDS</code></td><td>1800</td><td>Session TTL in Redis (rolling)</td></tr>
+      <tr><td><code>OLLAMA_BASE_URL</code></td><td>http://localhost:11434/v1</td><td>LLM API base URL</td></tr>
+      <tr><td><code>OLLAMA_MODEL</code></td><td>qwen2.5-coder:7b</td><td>Model identifier</td></tr>
+      <tr><td><code>LLM_TEMPERATURE</code></td><td>0.0</td><td>LLM sampling temperature</td></tr>
+      <tr><td><code>LLM_MAX_TOKENS</code></td><td>4096</td><td>Max tokens per LLM response</td></tr>
+      <tr><td><code>LLM_TIMEOUT_SECONDS</code></td><td>120</td><td>LLM request timeout</td></tr>
+      <tr><td><code>RATE_LIMIT_PER_MINUTE</code></td><td>30</td><td>Rate limit (not yet enforced in middleware)</td></tr>
+    </table>
+  </section>
+
+  <!-- ROADMAP -->
+  <section id="roadmap">
+    <h2>Phase Roadmap</h2>
+    <div class="timeline">
+      <div class="phase">
+        <div class="phase-line"><div class="phase-dot done"></div><div class="phase-stem"></div></div>
+        <div class="phase-body">
+          <h4>✅ Phase 1 — Core Analytics Pipeline (Complete)</h4>
+          <p>NL→SQL→Chart pipeline via SSE. Redis session state. Semantic intent routing. Follow-up query context. Chat history with folders, drag-and-drop, cascading delete.</p>
+        </div>
+      </div>
+      <div class="phase">
+        <div class="phase-line"><div class="phase-dot"></div><div class="phase-stem"></div></div>
+        <div class="phase-body">
+          <h4>🔄 Phase 2 — Enhanced AI &amp; Schema Intelligence</h4>
+          <p>Full Vanna agent integration with vector embeddings for schema retrieval. Training pipeline on query examples. Automatic table JOIN suggestions for multi-table schemas.</p>
+        </div>
+      </div>
+      <div class="phase">
+        <div class="phase-line"><div class="phase-dot pending"></div><div class="phase-stem"></div></div>
+        <div class="phase-body">
+          <h4>⏳ Phase 3 — Export, Auth &amp; Multi-tenancy</h4>
+          <p>CSV/JSON data export. User authentication (OAuth2/JWT). Per-user session isolation. Rate limiting enforcement. Custom chart theming.</p>
+        </div>
+      </div>
+      <div class="phase">
+        <div class="phase-line"><div class="phase-dot pending"></div></div>
+        <div class="phase-body">
+          <h4>⏳ Phase 4 — Scheduled Reports &amp; Collaboration</h4>
+          <p>Saved queries / dashboards. Scheduled report delivery via email. Shared chart links. Annotation and comment threads on charts.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RISKS -->
+  <section id="risks">
+    <h2>Risks &amp; Mitigations</h2>
+    <table>
+      <tr><th>Risk</th><th>Severity</th><th>Mitigation</th></tr>
+      <tr><td>LLM generates invalid SQL</td><td>High</td><td>Fallback chart on JSON parse error. Try/catch on SQL execution returns error SSE event. User can rephrase or follow-up.</td></tr>
+      <tr><td>StarRocks query timeout</td><td>Medium</td><td>120s read timeout on pymysql connection. LIMIT 1000 enforced in system prompt. Future: query timeout header.</td></tr>
+      <tr><td>Redis session expiry mid-conversation</td><td>Medium</td><td>TTL refreshed on every access. If session is missing, backend auto-creates a new one. UI shows new session badge.</td></tr>
+      <tr><td>Ollama LLM unavailable</td><td>High</td><td>Returns error SSE event with clear message. Health endpoint reports LLM status. Future: retry with exponential backoff.</td></tr>
+      <tr><td>LLM hallucinating column names</td><td>Medium</td><td>Full DDL injected into every request. StarRocks returns MySQLError on invalid columns — caught and returned as error event.</td></tr>
+      <tr><td>No input sanitization on LLM prompts</td><td>Low (internal only)</td><td>Prompt injection risk is low for internal use. For external deployment, input length is capped at 2000 chars.</td></tr>
+    </table>
+  </section>
+
+  <footer>
+    <p>Stats Center · Internal Technical Document · v0.1.0 · March 2026</p>
+    <p style="margin-top:4px;">Maintained by the Engineering team. For questions, open an issue in the <code>prompt-to-chart</code> repository.</p>
+  </footer>
+
+</main>
+</div>
+
+<script>
+  // Active nav highlight on scroll
+  const sections = document.querySelectorAll('section[id], div[id]');
+  const navLinks = document.querySelectorAll('nav ul li a');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        navLinks.forEach(link => {
+          link.classList.toggle('active', link.getAttribute('href') === '#' + entry.target.id);
+        });
+      }
+    });
+  }, { threshold: 0.3 });
+  sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>
