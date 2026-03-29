@@ -1,0 +1,61 @@
+/* SqlViewer Styles */
+
+.sql-viewer {
+  margin-top: var(--space-sm);
+}
+
+.sql-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-sm);
+  background: none;
+  border: none;
+  color: var(--color-text-tertiary);
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.sql-toggle:hover {
+  color: var(--color-text-secondary);
+}
+
+.sql-toggle-icon {
+  font-size: 0.625rem;
+  width: 12px;
+}
+
+.sql-toggle-label {
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.6875rem;
+}
+
+.sql-code-wrapper {
+  position: relative;
+  margin-top: var(--space-xs);
+  animation: fadeIn var(--transition-fast) ease-out;
+}
+
+.sql-copy-btn {
+  position: absolute;
+  top: var(--space-sm);
+  right: var(--space-sm);
+  padding: 2px 8px;
+  font-size: 0.6875rem;
+  z-index: 1;
+}
+
+.sql-code {
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  overflow-x: auto;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--color-accent-hover);
+}

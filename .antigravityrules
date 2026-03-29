@@ -1,0 +1,7 @@
+# Stats Center - Global Project Rules
+
+1. **Tech Stack Constraints:** All backend code MUST be Python/FastAPI. All frontend code MUST be React/Vite. The database is strictly StarRocks.
+2. **Database Pattern:** We strictly enforce the One Big Table (OBT) pattern. Do not generate SQL containing multi-table JOINs unless explicitly commanded.
+3. **Visualization Pattern:** The Python backend handles ALL Plotly Figure generation. It must serialize the figure using `fig.to_json()` and return it to the client. The React frontend is a "dumb terminal" that only renders the JSON via `react-plotly.js`.
+4. **State Management:** The LLM is stateless. All conversational memory (history, last_sql, last_dataframe) must be managed via Redis and injected into the FastAPI router.
+5. **Execution Safety:** Always ask for permission before executing destructive terminal commands or dropping database tables.

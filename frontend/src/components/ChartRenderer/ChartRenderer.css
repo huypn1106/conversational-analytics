@@ -1,0 +1,92 @@
+/* ChartRenderer Styles */
+
+.chart-renderer {
+  padding: var(--space-md);
+  margin-top: var(--space-sm);
+}
+
+.chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-sm);
+}
+
+.chart-badge {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.chart-fullscreen-btn {
+  padding: var(--space-xs) var(--space-sm);
+  font-size: 1rem;
+}
+
+.chart-container {
+  width: 100%;
+  height: 360px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.chart-plot {
+  border-radius: var(--radius-md);
+}
+
+/* ── Fullscreen Modal ──────────────────────── */
+.chart-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn var(--transition-fast) ease-out;
+}
+
+.chart-modal {
+  width: 90vw;
+  height: 80vh;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-lg);
+  position: relative;
+}
+
+.chart-modal-content {
+  width: 100%;
+  height: 100%;
+}
+
+.chart-close-btn {
+  position: absolute;
+  top: var(--space-md);
+  right: var(--space-md);
+  z-index: 10;
+  font-size: 1.25rem;
+}
+
+/* ── Error Fallback ────────────────────────── */
+.chart-error {
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  color: var(--color-warning);
+  font-size: 0.875rem;
+}
+
+.chart-error small {
+  color: var(--color-text-tertiary);
+  font-size: 0.75rem;
+}
+
+.chart-loading {
+  border-radius: var(--radius-md);
+}

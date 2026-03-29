@@ -1,0 +1,73 @@
+# Stats Center — Docker Compose
+# Full development stack: StarRocks + Redis + Backend + Frontend
+
+services:
+  # ── StarRocks (All-in-One) ─────────────────────────────────
+  starrocks:
+    image: starrocks/allin1-ubuntu:3.3-latest
+    ports:
+      - "9030:9030"   # FE MySQL protocol
+      - "8030:8030"   # FE HTTP
+      - "8040:8040"   # BE HTTP
+    volumes:
+      - starrocks_data:/data/starrocks
+    environment:
+      - STARROCKS_USER=root
+      - STARROCKS_PASSWORD=
+    healthcheck:
+      test: ["CMD", "mysql", "-h", "127.0.0.1", "-P", "9030", "-u", "root", "-e", "SELECT 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
+
+  # ── Redis ───────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # ── Backend (FastAPI) ───────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    depends_on:
+      redis:
+        condition: service_healthy
+      starrocks:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - STARROCKS_HOST=starrocks
+
+  # ── Frontend (Vite Dev Server) ──────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+
+volumes:
+  redis_data:
+  starrocks_data:

@@ -1,0 +1,203 @@
+/* ChatPanel Styles */
+
+.chat-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* ── Messages Area ─────────────────────────── */
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-lg) var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+/* ── Message Bubbles ───────────────────────── */
+.message {
+  max-width: 100%;
+}
+
+.message-user {
+  align-self: flex-end;
+  max-width: 75%;
+}
+
+.message-user .message-content {
+  background: var(--color-accent);
+  color: white;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-lg) var(--radius-lg) var(--radius-sm) var(--radius-lg);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.message-assistant {
+  align-self: flex-start;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+/* ── Response Parts ────────────────────────── */
+.response-status {
+  font-size: 0.8125rem;
+  color: var(--color-text-tertiary);
+  padding: var(--space-xs) 0;
+  font-style: italic;
+}
+
+.response-summary {
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--color-text-primary);
+  padding: var(--space-sm) 0;
+}
+
+.response-error {
+  padding: var(--space-sm) var(--space-md);
+  color: var(--color-error);
+  font-size: 0.875rem;
+  border-color: rgba(239, 68, 68, 0.2);
+}
+
+/* ── Streaming Indicator ───────────────────── */
+.streaming-indicator {
+  display: flex;
+  gap: 4px;
+  padding: var(--space-xs) 0;
+}
+
+.streaming-indicator .dot {
+  font-size: 0.5rem;
+  color: var(--color-accent);
+}
+
+/* ── Input Area ────────────────────────────── */
+.chat-input-area {
+  padding: var(--space-md);
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg-secondary);
+}
+
+.chat-input-form {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.chat-input {
+  flex: 1;
+  padding: var(--space-sm) var(--space-md);
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  outline: none;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.chat-input:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px var(--color-accent-glow);
+}
+
+.chat-input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.chat-input:disabled {
+  opacity: 0.6;
+}
+
+.chat-send-btn,
+.chat-cancel-btn {
+  white-space: nowrap;
+}
+
+.chat-send-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.chat-clear-btn {
+  margin-top: var(--space-sm);
+  width: 100%;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+/* ── Empty State ───────────────────────────── */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--space-2xl) var(--space-md);
+  flex: 1;
+}
+
+.empty-state-icon {
+  font-size: 3rem;
+  margin-bottom: var(--space-md);
+}
+
+.empty-state h2 {
+  font-size: 1.75rem;
+  background: linear-gradient(135deg, var(--color-text-primary), var(--color-accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: var(--space-sm);
+}
+
+.empty-state-subtitle {
+  color: var(--color-text-secondary);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  max-width: 440px;
+  margin-bottom: var(--space-xl);
+}
+
+.example-questions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  width: 100%;
+  max-width: 480px;
+}
+
+.example-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: var(--space-xs);
+}
+
+.example-question {
+  padding: var(--space-sm) var(--space-md);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  text-align: left;
+  transition: all var(--transition-fast);
+}
+
+.example-question:hover {
+  color: var(--color-text-primary);
+  border-color: var(--color-accent);
+  box-shadow: var(--shadow-glow);
+  transform: translateY(-1px);
+}

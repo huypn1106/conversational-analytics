@@ -1,0 +1,32 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Node
+node_modules/
+dist/
+build/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Vanna AI
+vanna_cache/
+
+# Logs
+logs/
+*.log
